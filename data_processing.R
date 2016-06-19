@@ -2,22 +2,30 @@
 library(R.utils)
 library(ggplot2)
 library(gridExtra)
+library(dplyr)
+
+# notes:
+# 1. massive size/speed of loading
+# 1.1 system info
+# 2. look at the data
 
 # download dataset
 if(!file.exists("./data")){dir.create("./data")}
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 download.file(fileUrl,destfile="./data/StormData.csv.bz2")
+bunzip2("./data/StormData.csv.bz2", "./data/StormData.csv", remove = FALSE, skip = TRUE)
 
 
 #loading dataset
-source_df <- read.csv("./data/StormData.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+source_df <- read.csv("./data/StormData.csv", header = TRUE, stringsAsFactors = FALSE)
 
+#part 1
 
 agg_fatalities <- aggregate(source_df$FATALITIES, by=list(source_df$EVTYPE),FUN=sum, na.rm=FALSE)
 
 agg_fatalities <- agg_fatalities[order(-agg_fatalities$x),]
 
-agg_fatalities <- agg_fatalities[1:20,]
+agg_fatalities <- agg_fatalities[1:10,]
 
 ggp1 <- ggplot(agg_fatalities, aes(x=Group.1, y = x)) + geom_bar(stat = "identity", fill = "red") + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -26,9 +34,100 @@ agg_injures <- aggregate(source_df$INJURIES, by=list(source_df$EVTYPE),FUN=sum, 
 
 agg_injures <- agg_injures[order(-agg_injures$x),]
 
-agg_injures <- agg_injures[1:20,]
+agg_injures <- agg_injures[1:10,]
 
 ggp2 <- ggplot(agg_injures, aes(x=Group.1, y = x)) + geom_bar(stat = "identity", fill = "red") + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 grid.arrange(ggp1, ggp2, ncol=1, nrow =2)
+
+
+# part 2
+value_of_damage_df <- select(source_df, EVTYPE, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP)
+
+#prop
+value_of_damage_df$PROPDMGEXP <- as.factor(value_of_damage_df$PROPDMGEXP)
+unique(value_of_damage_df$PROPDMGEXP)
+
+
+# Sorting the property exponent data
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "0"] <- 1
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "1"] <- 10
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "h"] <- 1e+02
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "2"] <- 1e+02
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "H"] <- 1e+02
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "K"] <- 1e+03
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "3"] <- 1e+04
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "4"] <- 1e+04
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "5"] <- 1e+05
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "m"] <- 1e+06
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "M"] <- 1e+06
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "6"] <- 1e+06
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "7"] <- 1e+07
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "8"] <- 1e+08
+
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "B"] <- 1e+09
+
+# give 0 to invalid exponent data, so they not count in
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "+"] <- 0
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "-"] <- 0
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == "?"] <- 0
+value_of_damage_df$PROPEXP[value_of_damage_df$PROPDMGEXP == ""] <-  0
+# compute the property damage value
+value_of_damage_df$PROPDMGVAL <- value_of_damage_df$PROPDMG * value_of_damage_df$PROPEXP
+
+agg_prop_damage <- aggregate(value_of_damage_df$PROPDMGVAL, by=list(value_of_damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
+
+agg_prop_damage <- agg_prop_damage[order(-agg_prop_damage$x),][1:10,]
+
+agg_prop_damage$Group.1<- factor(agg_prop_damage$Group.1, 
+                                 levels = agg_prop_damage$Group.1[-agg_prop_damage$x])
+
+ggp3 <- ggplot(agg_prop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "identity", fill = "red") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+# crop
+value_of_damage_df$CROPDMGEXP <- as.factor(value_of_damage_df$CROPDMGEXP)
+unique(value_of_damage_df$CROPDMGEXP)
+
+
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "0"] <- 1
+
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "2"] <- 1e+02
+
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "k"] <- 1e+03
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "K"] <- 1e+03
+
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "m"] <- 1e+06
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "M"] <- 1e+06
+
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "B"] <- 1e+09
+
+# give 0 to invalid exponent data, so they not count in
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == "?"] <- 0
+value_of_damage_df$CROPEXP[value_of_damage_df$CROPDMGEXP == ""] <-  0
+
+# compute the property damage value
+value_of_damage_df$CROPDMGVAL <- value_of_damage_df$CROPDMG * value_of_damage_df$CROPEXP
+
+agg_crop_damage <- aggregate(value_of_damage_df$CROPDMGVAL, by=list(value_of_damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
+
+agg_crop_damage <- agg_crop_damage[order(-agg_crop_damage$x),][1:10,]
+
+agg_crop_damage$Group.1<- factor(agg_crop_damage$Group.1, 
+                                 levels = agg_crop_damage$Group.1[-agg_crop_damage$x])
+
+
+ggp4 <- ggplot(agg_crop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "identity", fill = "red") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+grid.arrange(ggp3, ggp4, ncol=1, nrow =2)
