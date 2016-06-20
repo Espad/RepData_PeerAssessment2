@@ -1,3 +1,20 @@
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=10, fig.height=8, fig.path='instructions_fig/',
+                      echo=TRUE, message=FALSE)
+```
+---
+title: 'An Analysis Report of Health and Economic Impact by Severe Weather Events - Based on NOAA Storm Database'
+author: "Andrey Zaitcev"
+date: "20 θώνÿ 2016 γ."
+output: html_document
+
+---
+# Synopsis
+Some bla-bla-bla text here
+
+# Data processing.
+Before loading the data i initialise neccesary packages and get my environment info.
+```{r}
 #load dependencies
 library(R.utils)
 library(ggplot2)
@@ -6,11 +23,11 @@ library(dplyr)
 
 # get software environment
 sessionInfo()
+```
 
-# notes:
-# 2.1 set wd
-# 2. look at the data
+Loading the data
 
+```{r}
 # download dataset
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 if(!file.exists("./data")){dir.create("./data")}
@@ -22,7 +39,10 @@ bunzip2("./data/StormData.csv.bz2", "./data/StormData.csv", remove = FALSE, skip
 #before loading a data set check a size of it
 size_of_file <- (file.info("./data/StormData.csv")$size)/2^20
 size_of_file
+```
 
+Now let's load the data and see what there are in it.
+```{r}
 #loading dataset
 source_df <- read.csv("./data/StormData.csv", header = TRUE, stringsAsFactors = FALSE)
 
@@ -30,10 +50,20 @@ source_df <- read.csv("./data/StormData.csv", header = TRUE, stringsAsFactors = 
 head(source_df)
 
 str(source_df)
+```
 
+
+As it seems, for further research we need columns: EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP
+
+```{r}
 # get neccesary data
 damage_df <- select(source_df, EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP)
+```
 
+Before doing any calculations we need to prepare the data.
+
+Preparing the property damage data
+```{r}
 #prepare property damamge data
 damage_df$PROPDMGEXP <- as.factor(damage_df$PROPDMGEXP)
 unique(damage_df$PROPDMGEXP)
@@ -63,8 +93,11 @@ damage_df$PROPEXP[damage_df$PROPDMGEXP == "?"] <- 0
 damage_df$PROPEXP[damage_df$PROPDMGEXP == ""] <-  0
 # compute the property damage value
 damage_df$PROPDMGVAL <- damage_df$PROPDMG * damage_df$PROPEXP
+```
 
 
+Preparing the crop damage data
+```{r}
 # prepare crop damage data
 # Sorting the crop  exponent data
 damage_df$CROPDMGEXP <- as.factor(damage_df$CROPDMGEXP)
@@ -84,14 +117,21 @@ damage_df$CROPEXP[damage_df$CROPDMGEXP == ""] <-  0
 
 # compute the property damage value
 damage_df$CROPDMGVAL <- damage_df$CROPDMG * damage_df$CROPEXP
+```
 
+And let's aggregate prepared data by type of event.
+```{r}
 #aggregate the data
 agg_fatalities <- aggregate(damage_df$FATALITIES, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
 agg_injures <- aggregate(damage_df$INJURIES, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
 agg_prop_damage <- aggregate(damage_df$PROPDMGVAL, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
 agg_crop_damage <- aggregate(damage_df$CROPDMGVAL, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
+```
 
 
+# Results
+## Q1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to popuulation health?
+```{r}
 #part 1 here we aggregate data and count injures/fatalities by event type and build figures
 
 agg_fatalities <- agg_fatalities[order(-agg_fatalities$x),][1:10,]
@@ -114,8 +154,10 @@ ggp2 <- ggplot(agg_injures, aes(x=Group.1, y = x)) + geom_bar(stat = "identity",
   ylab("Count of events") + ggtitle("Number of injures in each event type")
 
 grid.arrange(ggp1, ggp2, ncol=1, nrow =2)
+```
 
-
+## Q2. Across the United States, which types of events have the greatest economic consequences?
+```{r}
 # part 2 here we aggregate data and count total money equivalent of damage done by event type and build figures
 
 agg_prop_damage <- agg_prop_damage[order(-agg_prop_damage$x),][1:10,]
@@ -138,3 +180,4 @@ ggp4 <- ggplot(agg_crop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "i
   ylab("Amount of damage, billions, usd") + ggtitle("Total crop damage in each event type")
 
 grid.arrange(ggp3, ggp4, ncol=1, nrow =2)
+```
