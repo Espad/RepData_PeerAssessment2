@@ -13,6 +13,8 @@ output: html_document
 Some bla-bla-bla text here
 
 # Data processing.
+## Environment and development info
+
 Before loading the data i initialise neccesary packages and get my environment info.
 ```{r}
 #load dependencies
@@ -25,7 +27,7 @@ library(dplyr)
 sessionInfo()
 ```
 
-Loading the data
+##Loading the data
 
 ```{r}
 # download dataset
@@ -41,6 +43,8 @@ size_of_file <- (file.info("./data/StormData.csv")$size)/2^20
 size_of_file
 ```
 
+## Data overview
+
 Now let's load the data and see what there are in it.
 ```{r}
 #loading dataset
@@ -52,13 +56,16 @@ head(source_df)
 str(source_df)
 ```
 
-
+## Subsetting the data
 As it seems, for further research we need columns: EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP
 
 ```{r}
 # get neccesary data
 damage_df <- select(source_df, EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
+
+
+## Data transformations.
 
 Before doing any calculations we need to prepare the data.
 
@@ -119,7 +126,8 @@ damage_df$CROPEXP[damage_df$CROPDMGEXP == ""] <-  0
 damage_df$CROPDMGVAL <- damage_df$CROPDMG * damage_df$CROPEXP
 ```
 
-And let's aggregate prepared data by type of event.
+
+Aggregating prepared data by type of event.
 ```{r}
 #aggregate the data
 agg_fatalities <- aggregate(damage_df$FATALITIES, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
@@ -134,14 +142,19 @@ agg_crop_damage <- aggregate(damage_df$CROPDMGVAL, by=list(damage_df$EVTYPE),FUN
 ```{r}
 #part 1 here we aggregate data and count injures/fatalities by event type and build figures
 
+# order by number of fatalities and get top 10 of the list
 agg_fatalities <- agg_fatalities[order(-agg_fatalities$x),][1:10,]
 
+# order event variables using evtype as factor with levels, 
+# this operation requiers to plot the graphs with desc order
 agg_fatalities$Group.1<- factor(agg_fatalities$Group.1, 
                              levels = agg_fatalities$Group.1[-agg_fatalities$x])
 
-
+# order by number of injures and get top 10 of the list
 agg_injures <- agg_injures[order(-agg_injures$x),][1:10,]
 
+# order event variables using evtype as factor with levels, 
+# this operation requiers to plot the graphs with desc order
 agg_injures$Group.1<- factor(agg_injures$Group.1, 
                                  levels = agg_injures$Group.1[-agg_injures$x])
 
@@ -156,18 +169,29 @@ ggp2 <- ggplot(agg_injures, aes(x=Group.1, y = x)) + geom_bar(stat = "identity",
 grid.arrange(ggp1, ggp2, ncol=1, nrow =2)
 ```
 
+As it seems from the graphs:
+
+1. **Tornado** affect most injures and fatalities in the USA, 5633 fatalities and 91346 injures.
+2. On the second place by fatalities is **Excessive Heat** (1903 deaths) 
+  and by injures is **TSTM Wind** (6957 injures)
+
 ## Q2. Across the United States, which types of events have the greatest economic consequences?
 ```{r}
 # part 2 here we aggregate data and count total money equivalent of damage done by event type and build figures
 
+# order by damage and get top 10 of the list.
 agg_prop_damage <- agg_prop_damage[order(-agg_prop_damage$x),][1:10,]
 
+# order event variables using evtype as factor with levels, 
+# this operation requiers to plot the graphs with desc order
 agg_prop_damage$Group.1<- factor(agg_prop_damage$Group.1, 
                                  levels = agg_prop_damage$Group.1[-agg_prop_damage$x])
 
-
+# order by damage and get top 10 of the list.
 agg_crop_damage <- agg_crop_damage[order(-agg_crop_damage$x),][1:10,]
 
+# order event variables using evtype as factor with levels, 
+# this operation requiers to plot the graphs with desc order
 agg_crop_damage$Group.1<- factor(agg_crop_damage$Group.1, 
                                  levels = agg_crop_damage$Group.1[-agg_crop_damage$x])
 
@@ -181,3 +205,8 @@ ggp4 <- ggplot(agg_crop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "i
 
 grid.arrange(ggp3, ggp4, ncol=1, nrow =2)
 ```
+
+As it seems from the graphs:
+
+1. **Flood** affect most property damage in the USA - 155 Billions of USD.
+2. **Drought** affect most crop damage in the USA - 14 Billions of USD.
