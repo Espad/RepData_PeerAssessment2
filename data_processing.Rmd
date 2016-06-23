@@ -3,7 +3,7 @@ knitr::opts_chunk$set(fig.width=10, fig.height=8, fig.path='instructions_fig/',
                       echo=TRUE, message=FALSE)
 ```
 ---
-title: 'An Impact of Unfavorable Weather Events on a Health and Economic - Based on NOAA Storm Database'
+title: 'An Impact of Weather Events on a Health and Economic'
 author: "Andrey Zaitcev"
 date: "20 June 2016"
 output: html_document
