@@ -115,6 +115,9 @@ ggp2 <- ggplot(agg_injures, aes(x=Group.1, y = x)) + geom_bar(stat = "identity",
 
 grid.arrange(ggp1, ggp2, ncol=1, nrow =2)
 
+agg_injures[1:2,]
+
+agg_fatalities[1:2,]
 
 # part 2 here we aggregate data and count total money equivalent of damage done by event type and build figures
 
@@ -138,3 +141,7 @@ ggp4 <- ggplot(agg_crop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "i
   ylab("Amount of damage, billions, usd") + ggtitle("Total crop damage in each event type")
 
 grid.arrange(ggp3, ggp4, ncol=1, nrow =2)
+
+agg_crop_damage[1:2,]
+
+agg_prop_damage[1:2,]

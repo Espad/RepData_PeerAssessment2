@@ -3,19 +3,36 @@ knitr::opts_chunk$set(fig.width=10, fig.height=8, fig.path='instructions_fig/',
                       echo=TRUE, message=FALSE)
 ```
 ---
-title: 'An Analysis Report of Health and Economic Impact by Severe Weather Events - Based on NOAA Storm Database'
+title: 'An Impact of Unfavorable Weather Events on a Health and Economic - Based on NOAA Storm Database'
 author: "Andrey Zaitcev"
-date: "20 θώνÿ 2016 γ."
+date: "20 June 2016"
 output: html_document
 
 ---
 # Synopsis
-Some bla-bla-bla text here
+Weather has a huge affect on people lifes, economics, countries. 
+Normal weather (depending on a region) helps to develop economics and improve peoples life, but bad weather can lead to fatalities, injures and huge material losses. 
+Gathering and researching the information about weather events and caused effects can help to reduce the harm.  
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. 
+This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. 
+Report contains results of exploratory analysis of the impact on health and economics different weather events based on data from NOAA Storm Database.
 
-# Data processing.
-## Environment and development info
+Results of the analysis: Tornado and Excessive Heat are the top2 most dangerous weather events, Flood causes most property damage, Drought causes most crop damage.
 
-Before loading the data i initialise neccesary packages and get my environment info.
+# Dataset info
+Dataset [NOAA Storm Database](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) [46.9MB]
+The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.
+
+# 1. Goals
+The main goal of the research is to explore the NOAA's dataset and answer the questions: 
+
+* Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+* Across the United States, which types of events have the greatest economic consequences?
+
+# 2. Environment and development info
+
+Before loading the data i load neccesary packages and show my environment info.
 ```{r}
 #load dependencies
 library(R.utils)
@@ -27,8 +44,18 @@ library(dplyr)
 sessionInfo()
 ```
 
-##Loading the data
+# 3. Data processing.
 
+## 3.1 Loading the data
+! by default the data will be saved in your current work directory!
+
+Steps to load the data:
+
+ 1. Save url to file in fileUrl variable
+ 2. Create data subfolder and download dataset in this folder.
+ 3. Unpack the data
+ 4. Chech the file size.
+ 
 ```{r}
 # download dataset
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
@@ -42,8 +69,8 @@ bunzip2("./data/StormData.csv.bz2", "./data/StormData.csv", remove = FALSE, skip
 size_of_file <- (file.info("./data/StormData.csv")$size)/2^20
 size_of_file
 ```
-
-## Data overview
+File size is 535.61 MB, so i have enough space to load this into memory.
+## 3.2 Data overview
 
 Now let's load the data and see what there are in it.
 ```{r}
@@ -56,8 +83,16 @@ head(source_df)
 str(source_df)
 ```
 
-## Subsetting the data
+## 3.3 Subsetting the data
 As it seems, for further research we need columns: EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP
+
+* EVTYPE - type of weather events.
+* FATALITIES - number of fatalities causes by weather event.
+* INJURIES - number of unjures causes by weather event.
+
+Property damage is represented with two fields, a number PROPDMG in dollars and the exponent PROPDMGEXP.
+
+Similarly, the crop damage is represented using two fields, CROPDMG and CROPDMGEXP. 
 
 ```{r}
 # get neccesary data
@@ -65,18 +100,27 @@ damage_df <- select(source_df, EVTYPE,FATALITIES, INJURIES, PROPDMG,PROPDMGEXP, 
 ```
 
 
-## Data transformations.
+## 3.4 Data transformations.
 
 Before doing any calculations we need to prepare the data.
 
-Preparing the property damage data
+Preparing the property damage data:
+
+ 1. Convert PROPDMGEXP to factor
+ 2. Get the unique levels, to get a range of all elements.
+ 3. Convert explonent to a numeric value, according to the range of variables from step 2.
+ 4. Multiply PROPDMG with exponent value from step 3.
+ 3. Do the same for the crop.
+ 
 ```{r}
 #prepare property damamge data
 damage_df$PROPDMGEXP <- as.factor(damage_df$PROPDMGEXP)
 unique(damage_df$PROPDMGEXP)
+```
 
-
-# Sorting the property exponent data
+As it seems we've got a range of variables, that needs to be converted to get correct damage value.
+```{r}
+# converting the property exp data
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "0"] <- 1
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "1"] <- 10
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "h"] <- 1e+02
@@ -93,7 +137,7 @@ damage_df$PROPEXP[damage_df$PROPDMGEXP == "7"] <- 1e+07
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "8"] <- 1e+08
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "B"] <- 1e+09
 
-# give 0 to invalid exponent data, so they not count in
+# give 0 to invalid data, so they not count in
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "+"] <- 0
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "-"] <- 0
 damage_df$PROPEXP[damage_df$PROPDMGEXP == "?"] <- 0
@@ -109,7 +153,12 @@ Preparing the crop damage data
 # Sorting the crop  exponent data
 damage_df$CROPDMGEXP <- as.factor(damage_df$CROPDMGEXP)
 unique(damage_df$CROPDMGEXP)
+```
 
+As it seems we've got a range of variables, that needs to be converted to get correct damage value.
+
+```{r}
+# converting the crop exp data
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "0"] <- 1
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "2"] <- 1e+02
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "k"] <- 1e+03
@@ -118,7 +167,7 @@ damage_df$CROPEXP[damage_df$CROPDMGEXP == "m"] <- 1e+06
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "M"] <- 1e+06
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "B"] <- 1e+09
 
-# give 0 to invalid exponent data, so they not count in
+# give 0 to invalid  data, so they not count in
 damage_df$CROPEXP[damage_df$CROPDMGEXP == "?"] <- 0
 damage_df$CROPEXP[damage_df$CROPDMGEXP == ""] <-  0
 
@@ -127,7 +176,8 @@ damage_df$CROPDMGVAL <- damage_df$CROPDMG * damage_df$CROPEXP
 ```
 
 
-Aggregating prepared data by type of event.
+## 3.5 Aggregating prepared data by type of event.
+To get the answer for the 1,2 question we need to sum the number of fatalities, injures and damage value by event types and save it in appropriate variables, that will be used in next step.
 ```{r}
 #aggregate the data
 agg_fatalities <- aggregate(damage_df$FATALITIES, by=list(damage_df$EVTYPE),FUN=sum, na.rm=FALSE)
@@ -137,10 +187,19 @@ agg_crop_damage <- aggregate(damage_df$CROPDMGVAL, by=list(damage_df$EVTYPE),FUN
 ```
 
 
-# Results
+# 4. Results
 ## Q1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to popuulation health?
+
+Steps to plot the graph:
+
+ 1. Order by number of fatalities
+ 2. Get top 10 of the list
+ 3. Convert evtype to factor.
+ 4. Plot the graps
+
+Similary i do for the injures.
 ```{r}
-#part 1 here we aggregate data and count injures/fatalities by event type and build figures
+#q 1. here we aggregate data and count injures/fatalities by event type and build figures
 
 # order by number of fatalities and get top 10 of the list
 agg_fatalities <- agg_fatalities[order(-agg_fatalities$x),][1:10,]
@@ -160,13 +219,21 @@ agg_injures$Group.1<- factor(agg_injures$Group.1,
 
 ggp1 <- ggplot(agg_fatalities, aes(x=Group.1, y = x)) + geom_bar(stat = "identity", fill = "purple") + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Event Type") + 
-  ylab("Count of events") + ggtitle("Number of fatalities in each event type")
+  ylab("Number of fatalities") + ggtitle("Number of fatalities in each event type")
 
 ggp2 <- ggplot(agg_injures, aes(x=Group.1, y = x)) + geom_bar(stat = "identity", fill = "purple") + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Event Type") + 
-  ylab("Count of events") + ggtitle("Number of injures in each event type")
+  ylab("Number of injures") + ggtitle("Number of injures in each event type")
 
 grid.arrange(ggp1, ggp2, ncol=1, nrow =2)
+```
+
+Getting number of fatalities and injures for top2
+```{r}
+
+agg_injures[1:2,]
+
+agg_fatalities[1:2,]
 ```
 
 As it seems from the graphs:
@@ -176,8 +243,18 @@ As it seems from the graphs:
   and by injures is **TSTM Wind** (6957 injures)
 
 ## Q2. Across the United States, which types of events have the greatest economic consequences?
+
+Steps to plot the graph:
+
+ 1. Order by value of property damage
+ 2. Get top 10 of the list
+ 3. Convert evtype to factor.
+ 4. Plot the graps
+
+Similary i do for the crop damage.
+
 ```{r}
-# part 2 here we aggregate data and count total money equivalent of damage done by event type and build figures
+# q 2. here we aggregate data and count total money equivalent of damage done by event type and build figures
 
 # order by damage and get top 10 of the list.
 agg_prop_damage <- agg_prop_damage[order(-agg_prop_damage$x),][1:10,]
@@ -206,7 +283,17 @@ ggp4 <- ggplot(agg_crop_damage, aes(x=Group.1, y = x/10^9)) + geom_bar(stat = "i
 grid.arrange(ggp3, ggp4, ncol=1, nrow =2)
 ```
 
+Getting value of crop and property damage for top2
+```{r}
+agg_crop_damage[1:2,]
+
+agg_prop_damage[1:2,]
+```
+
 As it seems from the graphs:
 
-1. **Flood** affect most property damage in the USA - 155 Billions of USD.
-2. **Drought** affect most crop damage in the USA - 14 Billions of USD.
+1. **Flood** affect most property damage in the USA - 144.65 Billions of USD.
+2. **Drought** affect most crop damage in the USA - 13.97 Billions of USD.
+
+# Conclusion
+Tornado has a most hude affect on peoples lifes, because it causes most number of fatalities and injures. Flood and drought causes most econimic harm. Therefore it is needed to take effort for minimizing harm from these types of weather.
